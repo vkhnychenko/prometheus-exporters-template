@@ -1,0 +1,57 @@
+version: "3.9"
+
+networks:
+  proxy:
+    external: true
+  grafana:
+    external: true
+
+services:
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:latest
+    #ports:
+      #- "9090:9090"
+    volumes:
+      - prom-data:/prometheus
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+    restart: unless-stopped
+    networks:
+      - grafana
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+  node-exporter:
+    container_name: node-exporter
+    image: prom/node-exporter:latest
+    #ports:
+      #- "9101:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - grafana
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude'
+      - '^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)'
+    restart: unless-stopped
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    # ports:
+    #   - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    restart: unless-stopped
+    networks:
+      - grafana
+volumes:
+  prom-data:
